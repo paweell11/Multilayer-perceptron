@@ -29,6 +29,8 @@ class MLP:
         elif activation == "softmax":
             exp_shift = np.exp(Z)
             A = exp_shift / np.sum(exp_shift, axis=0, keepdims=True)
+        elif activation == "linear":
+            A = Z    
         return A
 
     def forward_prop(self, X):
@@ -44,6 +46,22 @@ class MLP:
             A_prev = A
         return A_prev
 
+    def compute_cost(self, AL, Y):
+        m = AL.shape[1] 
+        cost = 0
+
+        if self.activations[-1] == "linear":
+            #MSE- Mean Squared Error
+            cost = np.sum(np.square(Y-AL))/(2*m)
+        elif self.activations[-1] == "sigmoid":
+            #Binary cross-entropy
+            cost = -np.sum(Y*np.log(AL) + (1-Y)*np.log(1-AL))/m
+        elif self.activations[-1] == "softmax":
+            #Categorical cross-entropy
+            correct_probs = AL[Y, np.arange(m)]
+            cost = -np.sum(np.log(correct_probs)) / m
+
+        return cost
 
 
 if __name__ == "__main__":
