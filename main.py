@@ -68,12 +68,32 @@ class MLP:
             cost = -np.sum(np.log(correct_probs))/m
         return cost
 
-    def linear_backward(self):
-        pass
+    def linear_backward(self, dZ, linear_cache):
+        A, W, b = linear_cache
+        m = dZ.shape[1]
+        dW = np.dot(dZ, np.transpose(A))/m
+        db = np.sum(dZ, axis=1, keepdims=True)/m
+        dA_prev = np.dot(np.transpose(W),dZ)
+        return dA_prev, dW, db
 
-    def activation_backward(self):
-        pass
+    def back_prop(self):
+        pass    
 
+
+    def activation_backward(self, dA, activation_cache, activation, Y=None):
+        Z = activation_cache
+        
+        if activation == "relu":
+            dZ = dA * (Z > 0)
+        elif activation == "sigmoid": 
+            S = 1 / (1 + np.exp(-Z))
+            dZ = dA * S * (1 - S) 
+        elif activation == "softmax":
+            dZ = dA - Y
+        elif activation == "linear":
+            dZ = dA 
+
+        return dZ
 
 
 if __name__ == "__main__":
