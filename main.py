@@ -6,7 +6,7 @@ class MLP:
         self.layer_dims = layer_dims
         self.activations = activations
         self.grads = {}
-        self.cache = None
+        self.caches = None
         self.layers = len(self.layer_dims) - 1
         self.learning_rate = learning_rate
 
@@ -19,7 +19,9 @@ class MLP:
 
     
     def linear_forward(self, A, W, b):
-        return np.dot(W, A) + b
+        linear_cache = (A, W, b)
+        Z = np.dot(W, A) + b
+        return Z, linear_cache
 
     def activation_forward(self, Z, activation):
         if activation == "relu":
@@ -30,10 +32,12 @@ class MLP:
             exp_shift = np.exp(Z)
             A = exp_shift / np.sum(exp_shift, axis=0, keepdims=True)
         elif activation == "linear":
-            A = Z    
-        return A
+            A = Z   
+        activation_cache = Z     
+        return A, activation_cache
 
     def forward_prop(self, X):
+        caches = []
         A_prev = X
 
         for l in range(1, self.layers+1):
@@ -41,9 +45,11 @@ class MLP:
             b = self.parameters["b" + str(l)]
             activation = self.activations[l-1]    
 
-            Z = self.linear_forward(A_prev, W, b)
-            A = self.activation_forward(Z, activation)
+            Z, linear_cache = self.linear_forward(A_prev, W, b)
+            A, activation_cache = self.activation_forward(Z, activation)
             A_prev = A
+            caches.append((linear_cache, activation_cache))
+        self.caches = caches
         return A_prev
 
     def compute_cost(self, AL, Y):
@@ -60,8 +66,14 @@ class MLP:
             #Categorical cross-entropy
             correct_probs = AL[Y, np.arange(m)]
             cost = -np.sum(np.log(correct_probs))/m
-
         return cost
+
+    def linear_backward(self):
+        pass
+
+    def activation_backward(self):
+        pass
+
 
 
 if __name__ == "__main__":
