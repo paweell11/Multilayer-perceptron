@@ -59,7 +59,7 @@ class MLP:
         elif self.activations[-1] == "softmax":
             #Categorical cross-entropy
             correct_probs = AL[Y, np.arange(m)]
-            cost = -np.sum(np.log(correct_probs)) / m
+            cost = -np.sum(np.log(correct_probs))/m
 
         return cost
 
