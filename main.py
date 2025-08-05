@@ -9,6 +9,7 @@ class MLP:
         self.caches = None
         self.layers = len(self.layer_dims) - 1
         self.learning_rate = learning_rate
+        self.loss_history = []
 
     def initialize_parameters(self,seed = 32):
         np.random.seed(seed)
@@ -93,7 +94,7 @@ class MLP:
 
     def output_backward(self, AL, Y):
         m = AL.shape[1] 
-        dZ_l = (AL - Y)/m 
+        dZ_l = AL - Y
         return dZ_l
 
 
@@ -129,6 +130,7 @@ class MLP:
             self.parameters["W" + str(l)] = self.parameters["W" + str(l)] - self.learning_rate * self.grads["dW" + str(l)] 
             self.parameters["b" + str(l)] = self.parameters["b" + str(l)] - self.learning_rate * self.grads["db" + str(l)] 
 
+
     def train(self, X, Y, epochs, print_cost=False, print_every=100):
         for epoch in range(1, epochs+1):
             AL = self.forward_prop(X)
@@ -144,50 +146,56 @@ class MLP:
                 print(f"Epoch {epoch:4d}/{epochs}, cost = {cost:.6f}")
 
 
+    def predict(self, X):
+        AL = self.forward_prop(X)
+
+        last_act = self.activations[-1]
+
+        if last_act == "softmax":
+            return np.argmax(AL, axis=0)
+        elif last_act == "sigmoid":
+            return (AL > 0.5).astype(int).reshape(-1)
+        elif last_act == "linear":
+            return AL
+
+
+
 if __name__ == "__main__":
     np.random.seed(123)
-    layer_dims   = [2, 3, 5]
-    activations  = ["relu", "softmax"]
-    learning_rate = 0.1
-    seed = 32
+    layer_dims   = [2, 3, 1]
+    activations  = ["relu", "sigmoid"]
+    learning_rate = 0.01
+    seed = 57
 
-    # 1) Inicjalizacja sieci
+    # 0) Inicjalizacja sieci
     mlp = MLP(layer_dims, activations, learning_rate)
     mlp.initialize_parameters(seed=seed)
 
-    # 2) Konkretne dane (4 próbki)
-    X = np.array([
-        [0.1, 0.2, 0.3, 0.4],
-        [1.0, 1.1, 1.2, 1.3]
-    ])  # shape (2,4)
+    # 1) Generujemy dwie klasowe dane:
+    centers = np.array([[0,0],[1,1]])
+    num_per_class = 100
+    X_list, Y_list = [], []
+    for cls, c in enumerate(centers):
+        pts = c[:, None] + 0.1 * np.random.randn(2, num_per_class)
+        X_list.append(pts)
+        Y_list.append(np.full(num_per_class, cls))
+    X = np.hstack(X_list)             # (2,200)
+    Y_idx = np.concatenate(Y_list)    # (200,)
+    Y = Y_idx.reshape(1, -1)          # (1,200) dla sigmoid
 
-    # Klasy jako indeksy 0–4 (mamy 5 klas), długość = liczba próbek
-    Y_idx = np.array([0, 1, 2, 3])      
-    # Zamiana na one-hot (5 x 4)
-    Y = np.eye(layer_dims[-1])[:, Y_idx]
+    # 2) Jednorazowy forward + koszt przed treningiem
+    AL_initial = mlp.forward_prop(X)
+    cost_initial = mlp.compute_cost(AL_initial, Y)
+    print(f"Cost after one forward_prop (before training): {cost_initial:.4f}")
 
+    # 3) Trening
+    mlp.train(X, Y, epochs=1000, print_cost=True, print_every=200)
 
-    # 3) Forward + cost
-    AL = mlp.forward_prop(X)
-    cost1 = mlp.compute_cost(AL, Y)
-    print(f"Cost before backprop: {cost1:.4f}")
+    # 4) Ocena na zbiorze treningowym
+    preds = mlp.predict(X)
+    acc = np.mean(preds == Y_idx)
+    print(f"Train accuracy: {acc*100:.2f}%")
 
-    # 4) Backward
-    mlp.backward_prop(AL, Y)
-    # pokaż kształty kilku gradientów
-    print("Shapes of some gradients:")
-    print(" dW1:", mlp.grads["dW1"].shape)
-    print(" db1:", mlp.grads["db1"].shape)
-    print(" dW2:", mlp.grads["dW2"].shape)
-    print(" db2:", mlp.grads["db2"].shape)
-
-    # 5) Update parametrów
-    mlp.update_parameters()
-
-    # 6) Drugi forward + nowy cost
-    AL2 = mlp.forward_prop(X)
-    cost2 = mlp.compute_cost(AL2, Y)
-    print(f"Cost after one update:  {cost2:.4f}")
 
 
 
