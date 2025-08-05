@@ -64,8 +64,7 @@ class MLP:
             cost = -np.sum(Y*np.log(AL) + (1-Y)*np.log(1-AL))/m
         elif self.activations[-1] == "softmax":
             #Categorical cross-entropy
-            correct_probs = AL[Y, np.arange(m)]
-            cost = -np.sum(np.log(correct_probs))/m
+            cost = -np.sum(np.log(Y))/m
         return cost
 
     def linear_backward(self, dZ, linear_cache):
@@ -75,12 +74,9 @@ class MLP:
         db = np.sum(dZ, axis=1, keepdims=True)/m
         dA_prev = np.dot(np.transpose(W),dZ)
         return dA_prev, dW, db
+ 
 
-    def back_prop(self):
-        pass    
-
-
-    def activation_backward(self, dA, activation_cache, activation, Y=None):
+    def activation_backward(self, dA, activation_cache, activation):
         Z = activation_cache
         
         if activation == "relu":
@@ -88,12 +84,42 @@ class MLP:
         elif activation == "sigmoid": 
             S = 1 / (1 + np.exp(-Z))
             dZ = dA * S * (1 - S) 
-        elif activation == "softmax":
-            dZ = dA - Y
         elif activation == "linear":
             dZ = dA 
-
         return dZ
+
+    def output_backward(self, AL, Y):
+        m = AL.shape[1] 
+        dZ_l = (AL - Y)/m 
+        return dZ_l
+
+
+    
+    def backward_prop(self, AL, Y):
+
+        self.grads = {}
+
+        linear_cache, activation_cache = self.caches[-1]
+
+        dZ_l = self.output_backward(AL, Y)
+        dA_prev, dW, db = self.linear_backward(dZ_l, linear_cache)
+
+        self.grads["dW" + str(self.layers)] = dW
+        self.grads["db" + str(self.layers)] = db        
+
+
+
+        for l in range(self.layers-1, 0, -1):
+            activation = self.activations[l-1]
+            linear_cache, activation_cache = self.caches[l-1]
+
+            dZ = self.activation_backward(dA_prev, activation_cache, activation)
+            dA_prev, dW, db = self.linear_backward(dZ, linear_cache)
+
+            self.grads["dW" + str(l)] = dW
+            self.grads["db" + str(l)] = db
+
+
 
 
 if __name__ == "__main__":
