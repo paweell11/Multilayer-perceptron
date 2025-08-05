@@ -29,7 +29,8 @@ class MLP:
         elif activation == "sigmoid": 
             A = 1/(1+np.exp(-Z))   
         elif activation == "softmax":
-            exp_shift = np.exp(Z)
+            Z_shift = Z - np.max(Z, axis=0, keepdims=True)
+            exp_shift = np.exp(Z_shift)
             A = exp_shift / np.sum(exp_shift, axis=0, keepdims=True)
         elif activation == "linear":
             A = Z   
@@ -64,7 +65,9 @@ class MLP:
             cost = -np.sum(Y*np.log(AL) + (1-Y)*np.log(1-AL))/m
         elif self.activations[-1] == "softmax":
             #Categorical cross-entropy
-            cost = -np.sum(np.log(Y))/m
+            eps = 1e-8
+            AL = np.clip(AL, eps, 1 - eps)
+            cost = -np.sum(Y*np.log(AL))/m
         return cost
 
     def linear_backward(self, dZ, linear_cache):
@@ -120,31 +123,58 @@ class MLP:
             self.grads["db" + str(l)] = db
 
 
+    def update_parameters(self):
+
+        for l in range(1, self.layers+1):
+            self.parameters["W" + str(l)] = self.parameters["W" + str(l)] - self.learning_rate * self.grads["dW" + str(l)] 
+            self.parameters["b" + str(l)] = self.parameters["b" + str(l)] - self.learning_rate * self.grads["db" + str(l)] 
+
 
 
 if __name__ == "__main__":
-    # mlp = MLP([2,3,5], ["relu","relu","softmax"], 0.01)
-    # mlp.initialize_parameters()
-    # print(mlp.parameters)
+    np.random.seed(123)
+    layer_dims   = [2, 3, 5]
+    activations  = ["relu", "softmax"]
+    learning_rate = 0.1
+    seed = 32
 
-    layer_dims   = [2, 3, 5]                     # 2 wejścia → 1 warstwa ukryta (3) → warstwa wyjściowa (5)
-    activations  = ["relu", "relu", "softmax"]
-    learning_rate = 0.01
-    seed = 42
-
-
+    # 1) Inicjalizacja sieci
     mlp = MLP(layer_dims, activations, learning_rate)
     mlp.initialize_parameters(seed=seed)
 
+    # 2) Konkretne dane (4 próbki)
+    X = np.array([
+        [0.1, 0.2, 0.3, 0.4],
+        [1.0, 1.1, 1.2, 1.3]
+    ])  # shape (2,4)
 
-    np.random.seed(123)
-    X = np.random.randn(layer_dims[0], 10)  #(2,10)
+    # Klasy jako indeksy 0–4 (mamy 5 klas), długość = liczba próbek
+    Y_idx = np.array([0, 1, 2, 3])      
+    # Zamiana na one-hot (5 x 4)
+    Y = np.eye(layer_dims[-1])[:, Y_idx]
 
+
+    # 3) Forward + cost
     AL = mlp.forward_prop(X)
+    cost1 = mlp.compute_cost(AL, Y)
+    print(f"Cost before backprop: {cost1:.4f}")
 
-    print("Wejście X.shape =", X.shape)
-    print("Wyjście AL.shape =", AL.shape)
-    print("AL:\n", AL)
+    # 4) Backward
+    mlp.backward_prop(AL, Y)
+    # pokaż kształty kilku gradientów
+    print("Shapes of some gradients:")
+    print(" dW1:", mlp.grads["dW1"].shape)
+    print(" db1:", mlp.grads["db1"].shape)
+    print(" dW2:", mlp.grads["dW2"].shape)
+    print(" db2:", mlp.grads["db2"].shape)
+
+    # 5) Update parametrów
+    mlp.update_parameters()
+
+    # 6) Drugi forward + nowy cost
+    AL2 = mlp.forward_prop(X)
+    cost2 = mlp.compute_cost(AL2, Y)
+    print(f"Cost after one update:  {cost2:.4f}")
 
 
 
