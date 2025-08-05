@@ -129,6 +129,19 @@ class MLP:
             self.parameters["W" + str(l)] = self.parameters["W" + str(l)] - self.learning_rate * self.grads["dW" + str(l)] 
             self.parameters["b" + str(l)] = self.parameters["b" + str(l)] - self.learning_rate * self.grads["db" + str(l)] 
 
+    def train(self, X, Y, epochs, print_cost=False, print_every=100):
+        for epoch in range(1, epochs+1):
+            AL = self.forward_prop(X)
+
+            cost = self.compute_cost(AL, Y)
+            self.loss_history.append(cost)
+
+            self.backward_prop(AL, Y)
+
+            self.update_parameters()
+
+            if print_cost and epoch % print_every == 0:
+                print(f"Epoch {epoch:4d}/{epochs}, cost = {cost:.6f}")
 
 
 if __name__ == "__main__":
