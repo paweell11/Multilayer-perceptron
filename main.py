@@ -164,6 +164,7 @@ class MLP:
         print(f"Accuracy: {acc*100:.2f}%")
 
 
+
 if __name__ == "__main__":
     np.random.seed(123)
     layer_dims   = [2, 3, 1]
