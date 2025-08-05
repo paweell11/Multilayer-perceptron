@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.datasets import load_iris
 
 class MLP:
     def __init__(self, layer_dims, activations, learning_rate):
@@ -166,40 +167,38 @@ class MLP:
 
 
 if __name__ == "__main__":
-    np.random.seed(123)
-    layer_dims   = [2, 3, 1]
-    activations  = ["relu", "sigmoid"]
-    learning_rate = 0.01
-    seed = 57
+    # 1) Wczytanie danych Iris
+    data = load_iris()
+    X_raw = data.data         # shape (150,4)
+    Y_idx  = data.target      # shape (150,), wartości 0,1,2
 
-    # 0) Inicjalizacja sieci
+    # 2) Transpozycja do formatu (n_x, m)
+    X = X_raw.T               # (4,150)
+    m = X.shape[1]
+
+    # 3) One-hot dla Y (3 klasy)
+    Y = np.eye(3)[:, Y_idx]   # (3,150)
+
+    # 4) Definicja i inicjalizacja sieci
+    layer_dims  = [4, 10, 3]          # 4 cechy → 10 ukrytych → 3 wyjścia
+    activations = ["relu", "softmax"]
+    learning_rate = 0.01
+    seed = 42
+
     mlp = MLP(layer_dims, activations, learning_rate)
     mlp.initialize_parameters(seed=seed)
 
-    # 1) Generujemy dwie klasowe dane:
-    centers = np.array([[0,0],[1,1]])
-    num_per_class = 100
-    X_list, Y_list = [], []
-    for cls, c in enumerate(centers):
-        pts = c[:, None] + 0.1 * np.random.randn(2, num_per_class)
-        X_list.append(pts)
-        Y_list.append(np.full(num_per_class, cls))
-    X = np.hstack(X_list)             # (2,200)
-    Y_idx = np.concatenate(Y_list)    # (200,)
-    Y = Y_idx.reshape(1, -1)          # (1,200) dla sigmoid
+    # 5) Pierwszy forward i koszt
+    AL0 = mlp.forward_prop(X)
+    print("Initial cost:", mlp.compute_cost(AL0, Y))
 
-    # 2) Jednorazowy forward + koszt przed treningiem
-    AL_initial = mlp.forward_prop(X)
-    cost_initial = mlp.compute_cost(AL_initial, Y)
-    print(f"Cost after one forward_prop (before training): {cost_initial:.4f}")
+    # 6) Trening
+    mlp.train(X, Y, epochs=2000, print_cost=True, print_every=500)
 
-    # 3) Trening
-    mlp.train(X, Y, epochs=1000, print_cost=True, print_every=200)
-
-    # 4) Ocena na zbiorze treningowym
-    preds = mlp.predict(X)
-
-    mlp.evaluate(X, Y)
+    # 7) Ocena
+    preds = mlp.predict(X)          # (150,)
+    acc = np.mean(preds == Y_idx)
+    print(f"Train accuracy on Iris: {acc*100:.2f}%")
 
 
 
