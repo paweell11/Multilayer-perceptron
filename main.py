@@ -158,6 +158,10 @@ class MLP:
         elif last_act == "linear":
             return AL
 
+    def evaluate(self, X, Y_idx):
+        preds = self.predict(X)          
+        acc   = np.mean(preds == Y_idx)   
+        print(f"Accuracy: {acc*100:.2f}%")
 
 
 if __name__ == "__main__":
@@ -193,8 +197,8 @@ if __name__ == "__main__":
 
     # 4) Ocena na zbiorze treningowym
     preds = mlp.predict(X)
-    acc = np.mean(preds == Y_idx)
-    print(f"Train accuracy: {acc*100:.2f}%")
+
+    mlp.evaluate(X, Y)
 
 
 
