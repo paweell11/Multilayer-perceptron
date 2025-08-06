@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
 
 class MLP:
     def __init__(self, layer_dims, activations, learning_rate):
@@ -167,38 +168,48 @@ class MLP:
 
 
 if __name__ == "__main__":
-    # 1) Wczytanie danych Iris
-    data = load_iris()
-    X_raw = data.data         # shape (150,4)
-    Y_idx  = data.target      # shape (150,), wartości 0,1,2
+    # 1) Load Iris data
+    data   = load_iris()
+    X_raw  = data.data       # shape (150, 4)
+    Y_idx  = data.target     # shape (150,), values 0, 1, 2
 
-    # 2) Transpozycja do formatu (n_x, m)
-    X = X_raw.T               # (4,150)
-    m = X.shape[1]
+    # 2) Split into train/test sets
+    #    X_raw: (150, 4), Y_idx: (150,)
+    X_train_raw, X_test_raw, Y_train_idx, Y_test_idx = train_test_split(
+        X_raw, Y_idx, test_size=0.2, random_state=42, stratify=Y_idx
+    )
+    # X_train_raw: (120, 4), X_test_raw: (30, 4)
 
-    # 3) One-hot dla Y (3 klasy)
-    Y = np.eye(3)[:, Y_idx]   # (3,150)
+    # 3) Transpose to (n_x, m) format
+    X_train = X_train_raw.T  # (4, 120)
+    X_test  = X_test_raw.T   # (4, 30)
 
-    # 4) Definicja i inicjalizacja sieci
-    layer_dims  = [4, 10, 3]          # 4 cechy → 10 ukrytych → 3 wyjścia
-    activations = ["relu", "softmax"]
+    # 4) One-hot encode labels for train and test
+    Y_train = np.eye(3)[:, Y_train_idx]  # (3, 120)
+    Y_test  = np.eye(3)[:, Y_test_idx]   # (3, 30)
+
+    # 5) Define and initialize the network
+    layer_dims    = [4, 10, 3]           # 4 features → 10 hidden → 3 outputs
+    activations   = ["relu", "softmax"]
     learning_rate = 0.01
-    seed = 42
+    seed          = 42
 
     mlp = MLP(layer_dims, activations, learning_rate)
     mlp.initialize_parameters(seed=seed)
 
-    # 5) Pierwszy forward i koszt
-    AL0 = mlp.forward_prop(X)
-    print("Initial cost:", mlp.compute_cost(AL0, Y))
+    # 6) Initial training cost (optional)
+    AL0 = mlp.forward_prop(X_train)
+    print("Initial training cost:", mlp.compute_cost(AL0, Y_train))
 
-    # 6) Trening
-    mlp.train(X, Y, epochs=2000, print_cost=True, print_every=500)
+    # 7) Training
+    mlp.train(X_train, Y_train, epochs=2000, print_cost=True, print_every=500)
 
-    # 7) Ocena
-    preds = mlp.predict(X)          # (150,)
-    acc = np.mean(preds == Y_idx)
-    print(f"Train accuracy on Iris: {acc*100:.2f}%")
+    # 8) Evaluation
+    print("\nFinal evaluation:")
+    print(" Training set:")
+    mlp.evaluate(X_train, Y_train_idx)
+    print(" Test set:")
+    mlp.evaluate(X_test, Y_test_idx)
 
 
 
