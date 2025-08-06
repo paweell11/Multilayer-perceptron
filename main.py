@@ -17,10 +17,22 @@ class MLP:
         np.random.seed(seed)
 
         for l in range(1, self.layers+1):
-            self.parameters["W" + str(l)] = np.random.randn(self.layer_dims[l],self.layer_dims[l-1]) * 0.01
-            self.parameters["b" + str(l)] = np.zeros((self.layer_dims[l],1))
+            n_curr = self.layer_dims[l]
+            n_prev = self.layer_dims[l-1]       
 
-    
+            if self.activations[l] == "relu":
+                # He initialization 
+                scale = np.sqrt(2.0/n_prev)
+            elif self.activations[l] in ("sigmoid", "tanh"):  
+                # Xavier/Glorot initialization
+                scale = np.sqrt(1.0/n_prev)  
+            else:
+                # default initialization
+                scale = 0.01
+
+            self.parameters["W" + str(l)] = np.random.randn(n_curr,n_prev) * scale
+            self.parameters["b" + str(l)] = np.zeros((n_curr,1))
+
     def linear_forward(self, A, W, b):
         linear_cache = (A, W, b)
         Z = np.dot(W, A) + b
@@ -39,7 +51,7 @@ class MLP:
             A = Z   
         elif activation == "tanh":
             A = (np.exp(Z) - np.exp(-Z))/(np.exp(Z) + np.exp(-Z))
-            #A = np.tanh(Z)
+            # A = np.tanh(Z)
 
         activation_cache = Z     
         return A, activation_cache
@@ -65,13 +77,13 @@ class MLP:
         cost = 0
 
         if self.activations[-1] == "linear":
-            #MSE- Mean Squared Error
+            # MSE- Mean Squared Error
             cost = np.sum(np.square(Y-AL))/(2*m)
         elif self.activations[-1] == "sigmoid":
-            #Binary cross-entropy
+            # Binary cross-entropy
             cost = -np.sum(Y*np.log(AL) + (1-Y)*np.log(1-AL))/m
         elif self.activations[-1] == "softmax":
-            #Categorical cross-entropy
+            # Categorical cross-entropy
             eps = 1e-8
             AL = np.clip(AL, eps, 1 - eps)
             cost = -np.sum(Y*np.log(AL))/m
@@ -85,7 +97,6 @@ class MLP:
         dA_prev = np.dot(np.transpose(W),dZ)
         return dA_prev, dW, db
  
-
     def activation_backward(self, dA, activation_cache, activation):
         Z = activation_cache
         
@@ -106,10 +117,7 @@ class MLP:
         dZ_l = AL - Y
         return dZ_l
 
-
-    
     def backward_prop(self, AL, Y):
-
         self.grads = {}
 
         linear_cache, activation_cache = self.caches[-1]
@@ -119,8 +127,6 @@ class MLP:
 
         self.grads["dW" + str(self.layers)] = dW
         self.grads["db" + str(self.layers)] = db        
-
-
 
         for l in range(self.layers-1, 0, -1):
             activation = self.activations[l-1]
@@ -134,11 +140,9 @@ class MLP:
 
 
     def update_parameters(self):
-
         for l in range(1, self.layers+1):
             self.parameters["W" + str(l)] = self.parameters["W" + str(l)] - self.learning_rate * self.grads["dW" + str(l)] 
             self.parameters["b" + str(l)] = self.parameters["b" + str(l)] - self.learning_rate * self.grads["db" + str(l)] 
-
 
     def train(self, X, Y, epochs, print_cost=False, print_every=100):
         for epoch in range(1, epochs+1):
@@ -153,7 +157,6 @@ class MLP:
 
             if print_cost and epoch % print_every == 0:
                 print(f"Epoch {epoch:4d}/{epochs}, cost = {cost:.6f}")
-
 
     def predict(self, X):
         AL = self.forward_prop(X)
@@ -171,8 +174,6 @@ class MLP:
         preds = self.predict(X)          
         acc   = np.mean(preds == Y_idx)   
         print(f"Accuracy: {acc*100:.2f}%")
-
-
 
 if __name__ == "__main__":
     # 1) Load Iris data
