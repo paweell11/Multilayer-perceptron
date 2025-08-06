@@ -37,6 +37,10 @@ class MLP:
             A = exp_shift / np.sum(exp_shift, axis=0, keepdims=True)
         elif activation == "linear":
             A = Z   
+        elif activation == "tanh":
+            A = (np.exp(Z) - np.exp(-Z))/(np.exp(Z) + np.exp(-Z))
+            #A = np.tanh(Z)
+
         activation_cache = Z     
         return A, activation_cache
 
@@ -92,6 +96,9 @@ class MLP:
             dZ = dA * S * (1 - S) 
         elif activation == "linear":
             dZ = dA 
+        elif activation == "tanh":
+            T = np.tanh(Z)
+            dZ = dA * (1 - T**2)
         return dZ
 
     def output_backward(self, AL, Y):
