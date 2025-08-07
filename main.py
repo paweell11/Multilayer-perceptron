@@ -3,7 +3,7 @@ from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 
 class MLP:
-    def __init__(self, layer_dims, activations, learning_rate):
+    def __init__(self, layer_dims, activations, learning_rate, reg_lambda = 0.0, reg_type = ""):
         self.parameters = {}
         self.layer_dims = layer_dims
         self.activations = activations
@@ -12,18 +12,20 @@ class MLP:
         self.layers = len(self.layer_dims) - 1
         self.learning_rate = learning_rate
         self.loss_history = []
+        self.reg_lambda = reg_lambda
+        self.reg_type = reg_type
 
-    def initialize_parameters(self,seed = 32):
+    def initialize_parameters(self, seed = 32):
         np.random.seed(seed)
 
         for l in range(1, self.layers+1):
             n_curr = self.layer_dims[l]
             n_prev = self.layer_dims[l-1]       
 
-            if self.activations[l] == "relu":
+            if self.activations[l-1] == "relu":
                 # He initialization 
                 scale = np.sqrt(2.0/n_prev)
-            elif self.activations[l] in ("sigmoid", "tanh"):  
+            elif self.activations[l-1] in ("sigmoid", "tanh"):  
                 # Xavier/Glorot initialization
                 scale = np.sqrt(1.0/n_prev)  
             else:
@@ -50,8 +52,8 @@ class MLP:
         elif activation == "linear":
             A = Z   
         elif activation == "tanh":
-            A = (np.exp(Z) - np.exp(-Z))/(np.exp(Z) + np.exp(-Z))
-            # A = np.tanh(Z)
+            # A = (np.exp(Z) - np.exp(-Z))/(np.exp(Z) + np.exp(-Z))
+            A = np.tanh(Z)
 
         activation_cache = Z     
         return A, activation_cache
@@ -74,19 +76,37 @@ class MLP:
 
     def compute_cost(self, AL, Y):
         m = AL.shape[1] 
+        data_cost = 0
+        reg_cost = 0
         cost = 0
 
         if self.activations[-1] == "linear":
             # MSE- Mean Squared Error
-            cost = np.sum(np.square(Y-AL))/(2*m)
+            data_cost = np.sum(np.square(Y-AL))/(2*m)
         elif self.activations[-1] == "sigmoid":
             # Binary cross-entropy
-            cost = -np.sum(Y*np.log(AL) + (1-Y)*np.log(1-AL))/m
+            data_cost = -np.sum(Y*np.log(AL) + (1-Y)*np.log(1-AL))/m
         elif self.activations[-1] == "softmax":
             # Categorical cross-entropy
             eps = 1e-8
             AL = np.clip(AL, eps, 1 - eps)
-            cost = -np.sum(Y*np.log(AL))/m
+            data_cost = -np.sum(Y*np.log(AL))/m
+        
+        if self.reg_lambda > 0 and self.reg_type == "L1":
+            w_summ = 0
+            for l in range(1, self.layers+1):
+                W = self.parameters["W" + str(l)]
+                w_summ += np.sum(np.abs(W))
+            reg_cost = self.reg_lambda / m * w_summ 
+
+        elif self.reg_lambda > 0 and self.reg_type == "L2":
+            w_summ = 0
+            for l in range(1, self.layers+1):
+                W = self.parameters["W" + str(l)]
+                w_summ += np.sum(np.square(W))
+            reg_cost = self.reg_lambda / (2*m) * w_summ     
+        
+        cost = data_cost +  reg_cost   
         return cost
 
     def linear_backward(self, dZ, linear_cache):
@@ -95,6 +115,12 @@ class MLP:
         dW = np.dot(dZ, np.transpose(A))/m
         db = np.sum(dZ, axis=1, keepdims=True)/m
         dA_prev = np.dot(np.transpose(W),dZ)
+        
+        if self.reg_lambda > 0 and self.reg_type == "L1":
+            dW += (self.reg_lambda / m) * np.sign(W)
+        elif self.reg_lambda > 0 and self.reg_type == "L2":
+            dW += (self.reg_lambda / m) * W    
+        
         return dA_prev, dW, db
  
     def activation_backward(self, dA, activation_cache, activation):
@@ -201,8 +227,10 @@ if __name__ == "__main__":
     activations   = ["relu", "softmax"]
     learning_rate = 0.01
     seed          = 42
+    reg_lambda    = 0.1
+    reg_type      = "L2"
 
-    mlp = MLP(layer_dims, activations, learning_rate)
+    mlp = MLP(layer_dims, activations, learning_rate, reg_lambda, reg_type)
     mlp.initialize_parameters(seed=seed)
 
     # 6) Initial training cost (optional)
