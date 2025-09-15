@@ -170,16 +170,23 @@ class MLP:
             self.parameters["W" + str(l)] = self.parameters["W" + str(l)] - self.learning_rate * self.grads["dW" + str(l)] 
             self.parameters["b" + str(l)] = self.parameters["b" + str(l)] - self.learning_rate * self.grads["db" + str(l)] 
 
-    def train(self, X, Y, epochs, print_cost=False, print_every=100):
+    def train(self, X, Y, epochs, batch_size=None ,print_cost=False, print_every=100):
+        m = X.shape[1]
+        if batch_size is None or batch_size <=0 or batch_size >  m:
+            batch_size = m
+
         for epoch in range(1, epochs+1):
-            AL = self.forward_prop(X)
+            for start in range(0, m, batch_size):
+                end = min(start + batch_size, m)
 
-            cost = self.compute_cost(AL, Y)
-            self.loss_history.append(cost)
+                AL = self.forward_prop(X[:,start:end])
 
-            self.backward_prop(AL, Y)
+                cost = self.compute_cost(AL, Y[:,start:end])
+                self.loss_history.append(cost)
 
-            self.update_parameters()
+                self.backward_prop(AL, Y[:,start:end])  
+
+                self.update_parameters()
 
             if print_cost and epoch % print_every == 0:
                 print(f"Epoch {epoch:4d}/{epochs}, cost = {cost:.6f}")
@@ -238,7 +245,7 @@ if __name__ == "__main__":
     print("Initial training cost:", mlp.compute_cost(AL0, Y_train))
 
     # 7) Training
-    mlp.train(X_train, Y_train, epochs=2000, print_cost=True, print_every=500)
+    mlp.train(X_train, Y_train, epochs=2000, batch_size=32 ,print_cost=True, print_every=500)
 
     # 8) Evaluation
     print("\nFinal evaluation:")
