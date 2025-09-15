@@ -176,20 +176,34 @@ class MLP:
             batch_size = m
 
         for epoch in range(1, epochs+1):
+
+            idx = np.random.permutation(m)
+
+            X_e = X[:, idx]
+            Y_e = Y[:, idx]
+
+            epoch_loss_sum = 0.0
+
             for start in range(0, m, batch_size):
                 end = min(start + batch_size, m)
 
-                AL = self.forward_prop(X[:,start:end])
+                X_b = X_e[:, start:end]
+                Y_b = Y_e[:, start:end]
 
-                cost = self.compute_cost(AL, Y[:,start:end])
-                self.loss_history.append(cost)
+                AL = self.forward_prop(X_b)
 
-                self.backward_prop(AL, Y[:,start:end])  
+                cost_b = self.compute_cost(AL, Y_b)
+                epoch_loss_sum += cost_b * (end - start)
+
+                self.backward_prop(AL, Y_b)  
 
                 self.update_parameters()
 
+            epoch_loss = epoch_loss_sum / m
+            self.loss_history.append(epoch_loss)
+            
             if print_cost and epoch % print_every == 0:
-                print(f"Epoch {epoch:4d}/{epochs}, cost = {cost:.6f}")
+                print(f"Epoch {epoch:4d}/{epochs}, loss = {epoch_loss:.6f} (batch_size={batch_size})")
 
     def predict(self, X):
         AL = self.forward_prop(X)
